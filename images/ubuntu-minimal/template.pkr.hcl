@@ -42,9 +42,10 @@ build {
     inline = [
       "cloud-init status --wait",
       "sudo apt-get update",
-      "sudo apt-get install -y curl wget vim htop",
+      "sudo apt-get install -y curl wget vim htop tree",
       "sudo apt-get autoremove -y",
-      "sudo apt-get autoclean"
+      "sudo apt-get autoclean",
+      "echo 'Ubuntu minimal image built successfully' > /tmp/build-info.txt"
     ]
   }
 

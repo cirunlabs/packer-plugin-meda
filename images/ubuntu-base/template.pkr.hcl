@@ -112,6 +112,7 @@ build {
       "sudo apt-get autoremove -y",
       "sudo apt-get autoclean",
       "sudo apt-get clean",
+      "echo 'Base image cleanup completed' > /tmp/cleanup-status.txt",
       "sudo rm -rf /var/lib/apt/lists/*",
       "sudo rm -rf /tmp/* /var/tmp/*",
       "sudo rm -rf /var/cache/apt/archives/*",

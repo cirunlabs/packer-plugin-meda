@@ -103,6 +103,7 @@ build {
       "sudo systemctl enable docker",
       "sudo systemctl enable containerd",
       "sudo usermod -aG docker ubuntu",
+      "echo 'Docker configured successfully' > /tmp/docker-setup.txt",
       "sudo mkdir -p /etc/docker",
       "echo '{\"log-driver\": \"json-file\", \"log-opts\": {\"max-size\": \"10m\", \"max-file\": \"3\"}}' | sudo tee /etc/docker/daemon.json"
     ]
