@@ -30,3 +30,13 @@ Thumbs.db
 .project
 cache
 /.vscode/
+
+# Plugin binaries
+plugin/packer-plugin-meda
+plugin/packer-plugin-meda.exe
+plugin/dist/
+
+# Build artifacts
+*.tar.gz
+*.zip
+manifest.json

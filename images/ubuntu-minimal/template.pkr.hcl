@@ -21,7 +21,7 @@ variable "organization" {
 
 source "meda-vm" "ubuntu-minimal" {
   vm_name           = "ubuntu-minimal-build"
-  base_image        = "ubuntu:latest"
+  base_image        = "ghcr.io/cirunlabs/ubuntu-base:latest"
   memory            = "1G"
   cpus              = 2
   disk_size         = "10G"

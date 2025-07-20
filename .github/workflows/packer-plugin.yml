@@ -17,6 +17,8 @@ on:
 
 env:
   GO_VERSION: "1.21"
+  MEDA_VERSION: v0.2
+  PACKER_VERSION: 1.10.0
 
 jobs:
   test:
@@ -131,8 +133,7 @@ jobs:
 
       - name: Install Packer
         run: |
-          PACKER_VERSION="1.10.0"
-          curl -fsSL https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip -o packer.zip
+          curl -fsSL https://releases.hashicorp.com/packer/${{ env.PACKER_VERSION }}/packer_${{ env.PACKER_VERSION }}_linux_amd64.zip -o packer.zip
           unzip packer.zip
           sudo mv packer /usr/local/bin/
           packer version
@@ -150,9 +151,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qemu-utils genisoimage
 
-          # Build and install Meda for validation
-          cargo build --release
-          sudo cp target/release/meda /usr/local/bin/
+          # Download and install Meda for validation
+          curl -fsSL https://github.com/cirunlabs/meda/releases/download/${{ env.MEDA_VERSION }}/meda_Linux_x86_64.tar.gz -o meda.tar.gz
+          tar -xzf meda.tar.gz
+          sudo mv meda /usr/local/bin/
+          chmod +x /usr/local/bin/meda
 
           # Validate templates
           cd images/ubuntu-minimal
