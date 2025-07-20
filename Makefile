@@ -57,15 +57,16 @@ validate-templates: install-plugin ## Validate all Packer templates
 	@echo "✅ All templates validated!"
 
 # Build all images
-build-images: install-plugin start-meda ## Build all VM images
-	@echo "🏗️ Building all images..."
-	@for dir in images/*/; do \
-		if [ -f "$$dir/template.pkr.hcl" ]; then \
-			echo "Building image in $$dir..."; \
-			cd "$$dir" && packer build template.pkr.hcl && cd ../..; \
-		fi \
-	done
-	@echo "✅ All images built successfully!"
+build-images: install-plugin start-meda ## Build ubuntu-base VM image
+	@echo "🏗️ Building ubuntu-base image..."
+	@if [ -f "images/ubuntu-base/template.pkr.hcl" ]; then \
+		echo "Building ubuntu-base image..."; \
+		cd "images/ubuntu-base" && packer build template.pkr.hcl && cd ../..; \
+	else \
+		echo "❌ ubuntu-base template not found"; \
+		exit 1; \
+	fi
+	@echo "✅ ubuntu-base image built successfully!"
 
 # Build a specific image
 build-image: install-plugin start-meda ## Build specific image (usage: make build-image IMAGE=ubuntu-docker)

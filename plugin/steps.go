@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +16,15 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
 )
+
+// getMedaDir returns the dynamic path to the meda directory
+func getMedaDir() (string, error) {
+	currentUser, err := user.Current()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current user: %v", err)
+	}
+	return filepath.Join(currentUser.HomeDir, "meda"), nil
+}
 
 // stepPullImage ensures the base image is available locally
 type stepPullImage struct{}
@@ -31,8 +42,15 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 			fmt.Sprintf("http://%s:%d/api/v1/images", config.MedaHost, config.MedaPort))
 	} else {
 		if config.MedaBinary == "cargo" {
+			medaDir, err := getMedaDir()
+			if err != nil {
+				err := fmt.Errorf("failed to get meda directory: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
 			checkCmd = exec.Command("cargo", "run", "--", "images")
-			checkCmd.Dir = "/home/ubuntu/meda"
+			checkCmd.Dir = medaDir
 		} else {
 			checkCmd = exec.Command(config.MedaBinary, "images")
 		}
@@ -57,8 +75,15 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 				}`, config.BaseImage))
 		} else {
 			if config.MedaBinary == "cargo" {
+				medaDir, err := getMedaDir()
+				if err != nil {
+					err := fmt.Errorf("failed to get meda directory: %s", err)
+					state.Put("error", err)
+					ui.Error(err.Error())
+					return multistep.ActionHalt
+				}
 				pullCmd = exec.Command("cargo", "run", "--", "pull", config.BaseImage)
-				pullCmd.Dir = "/home/ubuntu/meda"
+				pullCmd.Dir = medaDir
 			} else {
 				pullCmd = exec.Command(config.MedaBinary, "pull", config.BaseImage)
 			}
@@ -111,7 +136,7 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 
 		// Check for errors in stderr content
 		stderrContent := stderrOutput.String()
-		if pullErr != nil || strings.Contains(stderrContent, "unauthorized") || strings.Contains(stderrContent, "denied") {
+		if pullErr != nil || strings.Contains(stderrContent, "unauthorized") || strings.Contains(stderrContent, "denied") || strings.Contains(stderrContent, "permission denied") {
 			errorMsg := fmt.Sprintf("failed to pull base image '%s'", config.BaseImage)
 			if pullErr != nil {
 				errorMsg += fmt.Sprintf(": %s", pullErr)
@@ -119,6 +144,15 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 			if stderrContent != "" {
 				errorMsg += fmt.Sprintf(" - %s", strings.TrimSpace(stderrContent))
 			}
+
+			// Add helpful context for common issues
+			if strings.Contains(stderrContent, "permission denied") {
+				errorMsg += "\n💡 This may be a Meda permissions issue. Try running with proper permissions or check Meda installation."
+			}
+			if strings.Contains(stderrContent, "--password via the CLI is insecure") {
+				errorMsg += "\n⚠️  The password CLI warning is a known Meda limitation, not a plugin issue."
+			}
+
 			err := fmt.Errorf(errorMsg)
 			state.Put("error", err)
 			ui.Error(err.Error())
@@ -175,9 +209,16 @@ func (s *stepCreateVM) Run(ctx context.Context, state multistep.StateBag) multis
 
 		// Use cargo run for development
 		if config.MedaBinary == "cargo" {
+			medaDir, err := getMedaDir()
+			if err != nil {
+				err := fmt.Errorf("failed to get meda directory: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
 			cargoArgs := append([]string{"run", "--"}, args...)
 			cmd = exec.Command("cargo", cargoArgs...)
-			cmd.Dir = "/home/ubuntu/meda" // Set working directory for cargo
+			cmd.Dir = medaDir // Set working directory for cargo
 		} else {
 			cmd = exec.Command(config.MedaBinary, args...)
 		}
@@ -215,8 +256,15 @@ func (s *stepStartVM) Run(ctx context.Context, state multistep.StateBag) multist
 			fmt.Sprintf("http://%s:%d/api/v1/vms/%s/start", config.MedaHost, config.MedaPort, vmName))
 	} else {
 		if config.MedaBinary == "cargo" {
+			medaDir, err := getMedaDir()
+			if err != nil {
+				err := fmt.Errorf("failed to get meda directory: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
 			cmd = exec.Command("cargo", "run", "--", "start", vmName)
-			cmd.Dir = "/home/ubuntu/meda"
+			cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, "start", vmName)
 		}
@@ -265,8 +313,14 @@ func (s *stepWaitForVM) Run(ctx context.Context, state multistep.StateBag) multi
 					fmt.Sprintf("http://%s:%d/api/v1/vms/%s/ip", config.MedaHost, config.MedaPort, vmName))
 			} else {
 				if config.MedaBinary == "cargo" {
+					medaDir, err := getMedaDir()
+					if err != nil {
+						// Just log and return error for this specific case
+						ui.Error(fmt.Sprintf("failed to get meda directory: %s", err))
+						return multistep.ActionHalt
+					}
 					cmd = exec.Command("cargo", "run", "--", "ip", vmName)
-					cmd.Dir = "/home/ubuntu/meda"
+					cmd.Dir = medaDir
 				} else {
 					cmd = exec.Command(config.MedaBinary, "ip", vmName)
 				}
@@ -333,7 +387,7 @@ func (s *stepStopVM) Run(ctx context.Context, state multistep.StateBag) multiste
 	} else {
 		if config.MedaBinary == "cargo" {
 			cmd = exec.Command("cargo", "run", "--", "stop", vmName)
-			cmd.Dir = "/home/ubuntu/meda"
+			medaDir, err := getMedaDir(); if err != nil { return multistep.ActionHalt }; cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, "stop", vmName)
 		}
@@ -378,7 +432,7 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 			cmd = exec.Command("cargo", "run", "--", "create-image", config.OutputImageName,
 				"--tag", config.OutputTag,
 				"--from-vm", vmName)
-			cmd.Dir = "/home/ubuntu/meda"
+			medaDir, err := getMedaDir(); if err != nil { return multistep.ActionHalt }; cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, "create-image", config.OutputImageName,
 				"--tag", config.OutputTag,
@@ -464,7 +518,7 @@ func (s *stepPushImage) Run(ctx context.Context, state multistep.StateBag) multi
 		if config.MedaBinary == "cargo" {
 			cargoArgs := append([]string{"run", "--"}, args...)
 			cmd = exec.Command("cargo", cargoArgs...)
-			cmd.Dir = "/home/ubuntu/meda"
+			medaDir, err := getMedaDir(); if err != nil { return multistep.ActionHalt }; cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, args...)
 		}
@@ -555,7 +609,7 @@ func (s *stepCleanupVM) Run(ctx context.Context, state multistep.StateBag) multi
 	} else {
 		if config.MedaBinary == "cargo" {
 			cmd = exec.Command("cargo", "run", "--", "delete", vmName)
-			cmd.Dir = "/home/ubuntu/meda"
+			medaDir, err := getMedaDir(); if err != nil { return multistep.ActionHalt }; cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, "delete", vmName)
 		}

@@ -31,7 +31,7 @@ variable "dry_run" {
 source "meda-vm" "ubuntu-base" {
   # VM configuration
   vm_name           = "ubuntu-base-build"
-  base_image        = "ubuntu:latest"
+  base_image        = "ubuntu-base:latest"
   memory            = "2G"
   cpus              = 4
   disk_size         = "20G"

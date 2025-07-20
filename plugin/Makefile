@@ -126,12 +126,6 @@ clean:
 	-cd $(MEDA_DIR) && cargo run -- images list --json 2>/dev/null | jq -r '.[].name' | grep -E 'test|packer' | xargs -r -I {} cargo run -- rmi {}
 
 ## Build specific templates
-ubuntu-minimal:
-	$(MAKE) build TEMPLATE=../images/ubuntu-minimal/template.pkr.hcl
-
-ubuntu-docker:
-	$(MAKE) build TEMPLATE=../images/ubuntu-docker/template.pkr.hcl
-
 ubuntu-base:
 	$(MAKE) build TEMPLATE=../images/ubuntu-base/template.pkr.hcl
 

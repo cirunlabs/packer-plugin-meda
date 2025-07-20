@@ -44,35 +44,28 @@ jobs:
       - name: Detect changed images
         id: changes
         run: |
-          # Create images directory if it doesn't exist
-          mkdir -p images
-
-          # Get list of all image directories
-          if [ -d "images" ]; then
-            image_dirs=$(find images -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
-          else
-            image_dirs=""
-          fi
+          # Only build ubuntu-base image
+          ubuntu_base_dir="ubuntu-base"
 
           # If specific image requested via workflow_dispatch
           if [ "${{ github.event.inputs.image_name }}" != "" ]; then
-            if echo "$image_dirs" | grep -q "^${{ github.event.inputs.image_name }}$"; then
-              matrix="[\"${{ github.event.inputs.image_name }}\"]"
+            if [ "${{ github.event.inputs.image_name }}" == "ubuntu-base" ]; then
+              matrix="[\"ubuntu-base\"]"
               has_changes="true"
             else
-              echo "Error: Image '${{ github.event.inputs.image_name }}' not found"
+              echo "Error: Only 'ubuntu-base' image is supported"
               exit 1
             fi
-          # Force rebuild all images
+          # Force rebuild ubuntu-base image
           elif [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
-            if [ -n "$image_dirs" ]; then
-              matrix=$(echo "$image_dirs" | jq -R -s -c 'split("\n")[:-1]')
+            if [ -d "images/ubuntu-base" ]; then
+              matrix="[\"ubuntu-base\"]"
               has_changes="true"
             else
               matrix="[]"
               has_changes="false"
             fi
-          # Detect changes for push/PR events
+          # Detect changes for push/PR events - only check ubuntu-base
           else
             if [ "${{ github.event_name }}" == "pull_request" ]; then
               base_sha="${{ github.event.pull_request.base.sha }}"
@@ -80,20 +73,15 @@ jobs:
               base_sha="${{ github.event.before }}"
             fi
 
-            changed_dirs=""
-            if [ -n "$image_dirs" ]; then
-              for dir in $image_dirs; do
-                if git diff --quiet "$base_sha" HEAD -- "images/$dir/" 2>/dev/null; then
-                  continue
-                else
-                  changed_dirs="$changed_dirs $dir"
-                fi
-              done
-            fi
-
-            if [ -n "$changed_dirs" ]; then
-              matrix=$(echo $changed_dirs | tr ' ' '\n' | jq -R -s -c 'split("\n")[:-1] | map(select(length > 0))')
-              has_changes="true"
+            # Check if ubuntu-base directory has changes
+            if [ -d "images/ubuntu-base" ]; then
+              if git diff --quiet "$base_sha" HEAD -- "images/ubuntu-base/" 2>/dev/null; then
+                matrix="[]"
+                has_changes="false"
+              else
+                matrix="[\"ubuntu-base\"]"
+                has_changes="true"
+              fi
             else
               matrix="[]"
               has_changes="false"
