@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'packer-plugin-meda/**'
+      - 'plugin/**'
       - '.github/workflows/packer-plugin.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'packer-plugin-meda/**'
+      - 'plugin/**'
       - '.github/workflows/packer-plugin.yml'
   release:
     types: [published]
@@ -36,13 +36,13 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('packer-plugin-meda/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('plugin/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
       - name: Run tests
         run: |
-          cd packer-plugin-meda
+          cd plugin
           go mod tidy
           go test -v ./...
 
@@ -50,7 +50,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
-          working-directory: packer-plugin-meda
+          working-directory: plugin
 
   build:
     needs: test
@@ -77,13 +77,13 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('packer-plugin-meda/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('plugin/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
       - name: Build plugin
         run: |
-          cd packer-plugin-meda
+          cd plugin
           go mod tidy
 
           # Set version from git tag or commit
@@ -108,7 +108,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: packer-plugin-meda-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: packer-plugin-meda/dist/
+          path: plugin/dist/
           retention-days: 7
 
   integration-test:
@@ -127,7 +127,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: packer-plugin-meda-linux-amd64
-          path: packer-plugin-meda/dist/
+          path: plugin/dist/
 
       - name: Install Packer
         run: |
@@ -139,7 +139,7 @@ jobs:
 
       - name: Install plugin
         run: |
-          cd packer-plugin-meda
+          cd plugin
           chmod +x dist/packer-plugin-meda_linux_amd64
           cp dist/packer-plugin-meda_linux_amd64 packer-plugin-meda
           packer plugins install --path packer-plugin-meda github.com/cirunlabs/meda
@@ -192,7 +192,7 @@ jobs:
 
       - name: Create release
         run: |
-          cd packer-plugin-meda
+          cd plugin
 
           # Set up environment for release
           export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
@@ -202,7 +202,7 @@ jobs:
 
       - name: Generate plugin manifest
         run: |
-          cd packer-plugin-meda
+          cd plugin
 
           # Create plugin manifest for Packer Registry
           cat > plugin-manifest.json << EOF
@@ -210,8 +210,8 @@ jobs:
             "name": "meda",
             "version": "${{ github.event.release.tag_name }}",
             "description": "Packer plugin for building VM images with Meda",
-            "author": "CirumLabs",
-            "license": "MIT",
+            "author": "CirunLabs",
+            "license": "MPL-2.0",
             "source": "https://github.com/cirunlabs/packer-plugin-meda",
             "releases": []
           }
@@ -223,7 +223,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: packer-plugin-meda/plugin-manifest.json
+          asset_path: plugin/plugin-manifest.json
           asset_name: plugin-manifest.json
           asset_content_type: application/json
 
@@ -239,7 +239,7 @@ jobs:
 
       - name: Update documentation
         run: |
-          cd packer-plugin-meda
+          cd plugin
 
           # Update version in README if this is a release
           if [[ "${{ github.event_name }}" == "release" ]]; then

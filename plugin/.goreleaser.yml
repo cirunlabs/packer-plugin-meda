@@ -37,7 +37,8 @@ archives:
       - CHANGELOG*
 
 checksum:
-  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  name_template: 'checksums.txt'
+  algorithm: sha256
 
 changelog:
   sort: asc
@@ -69,22 +70,31 @@ release:
   header: |
     ## Packer Plugin for Meda v{{ .Version }}
 
-    This release includes the Packer plugin for building VM images with Meda.
+    This release contains binaries for the Packer plugin for Meda.
 
     ### Installation
 
     ```bash
-    packer plugins install github.com/cirunlabs/meda v{{ .Version }}
+    # Download the appropriate binary for your platform
+    curl -LO https://github.com/cirunlabs/packer-plugin-meda/releases/download/v{{ .Version }}/packer-plugin-meda_{{ .Version }}_linux_amd64.zip
+
+    # Extract and install
+    unzip packer-plugin-meda_{{ .Version }}_linux_amd64.zip
+    chmod +x packer-plugin-meda
+    packer plugins install --path packer-plugin-meda github.com/cirunlabs/meda
     ```
 
     ### Usage
 
     See the [documentation](https://github.com/cirunlabs/packer-plugin-meda/blob/main/README.md) for usage examples.
+  footer: |
+    **Full Changelog**: https://github.com/cirunlabs/packer-plugin-meda/compare/{{ .PreviousTag }}...v{{ .Tag }}
 
 snapshot:
   name_template: "{{ .Version }}-SNAPSHOT-{{ .ShortCommit }}"
 
-signs:
-  - artifacts: checksum
-    cmd: gpg
-    args: ["--batch", "--local-user", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]
+# Remove GPG signing for now - can be added later if needed
+# signs:
+#   - artifacts: checksum
+#     cmd: gpg
+#     args: ["--batch", "--local-user", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]

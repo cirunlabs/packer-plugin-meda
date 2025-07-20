@@ -1,0 +1,69 @@
+name: Release Packer Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+          workdir: plugin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate plugin manifest
+        run: |
+          cd plugin
+
+          # Extract version from tag
+          VERSION="${GITHUB_REF#refs/tags/}"
+
+          # Create plugin manifest for Packer Registry
+          cat > plugin-manifest.json << EOF
+          {
+            "name": "meda",
+            "version": "${VERSION}",
+            "description": "Packer plugin for building VM images with Meda Cloud-Hypervisor",
+            "author": "CirunLabs",
+            "license": "MPL-2.0",
+            "source": "https://github.com/cirunlabs/packer-plugin-meda",
+            "releases": [
+              {
+                "version": "${VERSION}",
+                "url": "https://github.com/cirunlabs/packer-plugin-meda/releases/tag/${VERSION}",
+                "sha256_checksums_url": "https://github.com/cirunlabs/packer-plugin-meda/releases/download/${VERSION}/checksums.txt"
+              }
+            ]
+          }
+          EOF
+
+      - name: Upload plugin manifest
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: plugin/plugin-manifest.json
+          asset_name: plugin-manifest.json
+          asset_content_type: application/json

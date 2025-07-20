@@ -161,13 +161,13 @@ jobs:
 
       - name: Build Packer plugin
         run: |
-          cd packer-plugin-meda
+          cd plugin
           go mod tidy
           go build -o packer-plugin-meda
 
       - name: Install Packer plugin
         run: |
-          cd packer-plugin-meda
+          cd plugin
           packer plugins install --path packer-plugin-meda github.com/cirunlabs/meda
 
       - name: Setup Meda environment
