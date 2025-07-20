@@ -61,9 +61,6 @@ changelog:
       order: 999
 
 release:
-  github:
-    owner: cirunlabs
-    name: packer-plugin-meda
   draft: false
   prerelease: auto
   name_template: "v{{ .Version }}"

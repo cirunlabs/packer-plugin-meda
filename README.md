@@ -261,6 +261,31 @@ After release:
 - [ ] Release artifacts are uploaded
 - [ ] Installation instructions work
 
+### Troubleshooting Releases
+
+**Repository Detection Issues:**
+If GoReleaser tries to release to the wrong repository, check:
+
+```bash
+# Verify git remote is correct
+git remote -v
+
+# Check if GITHUB_REPOSITORY is set correctly in workflow
+# Should be: cirunlabs/packer-plugin-meda
+```
+
+**Failed Release Recovery:**
+If a release fails partway through:
+
+```bash
+# Delete the failed tag locally and remotely
+git tag -d v1.0.0
+git push origin :refs/tags/v1.0.0
+
+# Delete the draft release on GitHub (if created)
+# Then re-run the release process
+```
+
 ## License
 
 This project is licensed under the Mozilla Public License Version 2.0 - see the [LICENSE](LICENSE) file for details.

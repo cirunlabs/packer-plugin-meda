@@ -31,6 +31,7 @@ jobs:
           workdir: plugin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: cirunlabs/packer-plugin-meda
 
       - name: Generate plugin manifest
         run: |
