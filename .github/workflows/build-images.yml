@@ -183,6 +183,9 @@ jobs:
           cd images/${{ matrix.image }}
           packer validate .
 
+      - name: Debugging with tmate
+        uses: mxschmitt/action-tmate@v3.22
+
       - name: Build image with Packer
         run: |
           cd images/${{ matrix.image }}
