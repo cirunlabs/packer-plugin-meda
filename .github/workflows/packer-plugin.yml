@@ -42,6 +42,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Check for trailing whitespace
+        run: |
+          files_with_whitespace=$(find . -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.hcl" -o -name "Makefile" -o -name "*.go" | xargs grep -l " $" 2>/dev/null || true)
+          if [ -n "$files_with_whitespace" ]; then
+            echo "❌ Files with trailing whitespace found:"
+            echo "$files_with_whitespace"
+            exit 1
+          else
+            echo "✅ No trailing whitespace found"
+          fi
+
       - name: Run tests
         run: |
           cd plugin

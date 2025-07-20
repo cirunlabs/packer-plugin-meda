@@ -248,12 +248,14 @@ jobs:
             exit 1
           fi
 
-          # Push image using Meda
-          meda images push \
-            --name "$local_image" \
-            --image "${{ steps.meta.outputs.full-image-name }}" \
-            --registry "${{ env.REGISTRY }}" \
-            --org "${{ env.IMAGE_NAMESPACE }}"
+          # Push image using Meda with verbose output
+          echo "🚀 Pushing image: $local_image → ${{ steps.meta.outputs.full-image-name }}"
+          echo "📝 Registry: ${{ env.REGISTRY }}"
+          echo "🏷️ Full image name: ${{ steps.meta.outputs.full-image-name }}"
+
+          # Push image using Meda (correct syntax)
+          meda push "$local_image" "${{ steps.meta.outputs.full-image-name }}" \
+            --registry "${{ env.REGISTRY }}"
 
       - name: Generate build summary
         run: |

@@ -87,16 +87,21 @@ endif
 start-meda: ## Start Meda API server
 	@echo "🚀 Starting Meda API server..."
 	@if ! pgrep -f "meda serve" > /dev/null; then \
-		meda serve --host 127.0.0.1 --port 7777 > /tmp/meda.log 2>&1 & \
+		echo "📝 Meda logs will be written to /tmp/meda-server.log"; \
+		meda serve --host 127.0.0.1 --port 7777 > /tmp/meda-server.log 2>&1 & \
 		sleep 5; \
 		if curl -sf http://127.0.0.1:7777/api/v1/health > /dev/null; then \
-			echo "✅ Meda API server started successfully"; \
+			echo "✅ Meda API server started successfully (PID: $$(pgrep -f 'meda serve'))"; \
+			echo "💡 View logs with: tail -f /tmp/meda-server.log"; \
 		else \
 			echo "❌ Failed to start Meda API server"; \
+			echo "📋 Server logs:"; \
+			cat /tmp/meda-server.log 2>/dev/null || echo "No logs found"; \
 			exit 1; \
 		fi \
 	else \
-		echo "✅ Meda API server already running"; \
+		echo "✅ Meda API server already running (PID: $$(pgrep -f 'meda serve'))"; \
+		echo "💡 View logs with: tail -f /tmp/meda-server.log"; \
 	fi
 
 # Stop Meda API server
@@ -127,7 +132,7 @@ clean: ## Clean up build artifacts and stop services
 	@echo "🧹 Cleaning up..."
 	@$(MAKE) stop-meda || true
 	@rm -f plugin/packer-plugin-meda
-	@rm -f /tmp/meda.log
+	@rm -f /tmp/meda-server.log
 	@echo "Cleaning up any leftover VMs and images..."
 	@if command -v meda &> /dev/null; then \
 		meda list --json 2>/dev/null | jq -r '.[].name' | grep -E '^packer-' | xargs -r -I {} meda delete {} 2>/dev/null || true; \
@@ -136,7 +141,7 @@ clean: ## Clean up build artifacts and stop services
 	@echo "✅ Cleanup completed!"
 
 # Quick development cycle
-dev: clean build-plugin install-plugin validate-templates ## Quick development cycle: clean, build, install, validate
+dev: clean check-whitespace build-plugin install-plugin validate-templates ## Quick development cycle: clean, check whitespace, build, install, validate
 
 # Full build pipeline
 all: setup dev ## Complete build pipeline: setup, build plugin, validate templates (images require base images)
@@ -155,6 +160,52 @@ list-images: ## List available image templates
 			fi \
 		fi \
 	done
+
+# View Meda server logs
+logs: ## View Meda server logs (real-time)
+	@echo "📋 Viewing Meda server logs..."
+	@if [ -f /tmp/meda-server.log ]; then \
+		tail -f /tmp/meda-server.log; \
+	else \
+		echo "❌ No Meda logs found. Start Meda with 'make start-meda' first"; \
+	fi
+
+# Test image push to registry
+test-push: ## Test pushing an image to registry (usage: make test-push IMAGE=image-name REGISTRY=ghcr.io)
+ifndef IMAGE
+	@echo "❌ Please specify IMAGE variable. Example: make test-push IMAGE=my-image"
+	@exit 1
+endif
+	@echo "🧪 Testing image push..."
+	@if ! meda images list --json | jq -r '.[].name' | grep -q "$(IMAGE)"; then \
+		echo "❌ Image '$(IMAGE)' not found locally"; \
+		echo "Available images:"; \
+		meda images list --json | jq -r '.[].name' || echo "No images found"; \
+		exit 1; \
+	fi
+	@echo "🚀 Test pushing $(IMAGE) to registry..."
+	@REGISTRY=${REGISTRY:-ghcr.io}; \
+	TARGET_IMAGE="$$REGISTRY/cirunlabs/$(IMAGE):test"; \
+	echo "📝 Target: $$TARGET_IMAGE"; \
+	meda push "$(IMAGE)" "$$TARGET_IMAGE" --registry "$$REGISTRY" --dry-run
+
+# Check for trailing whitespace in source files
+check-whitespace: ## Check for trailing whitespace in source files
+	@echo "🔍 Checking for trailing whitespace..."
+	@files_with_whitespace=$$(find . -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.hcl" -o -name "Makefile" -o -name "*.go" | xargs grep -l " $$" 2>/dev/null || true); \
+	if [ -n "$$files_with_whitespace" ]; then \
+		echo "❌ Files with trailing whitespace found:"; \
+		echo "$$files_with_whitespace"; \
+		exit 1; \
+	else \
+		echo "✅ No trailing whitespace found"; \
+	fi
+
+# Fix trailing whitespace in source files
+fix-whitespace: ## Remove trailing whitespace from source files
+	@echo "🔧 Removing trailing whitespace..."
+	@find . -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.hcl" -o -name "Makefile" -o -name "*.go" | xargs sed -i 's/[ \t]*$$//'
+	@echo "✅ Trailing whitespace removed"
 
 # Show status of services and tools
 status: ## Show status of required tools and services
