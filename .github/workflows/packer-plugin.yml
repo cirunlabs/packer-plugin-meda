@@ -209,7 +209,7 @@ jobs:
           cd plugin
 
           # Set up environment for release
-          export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          export GITHUB_TOKEN="${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}"
 
           # Run GoReleaser
           goreleaser release --clean
@@ -234,7 +234,7 @@ jobs:
       - name: Update release with manifest
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: plugin/plugin-manifest.json

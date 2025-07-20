@@ -180,6 +180,10 @@ source "meda-vm" "automated" {
 **"API connection failed"**
 → Make sure Meda server is running: `meda serve`
 
+**"authentication required" or "unauthorized"**
+→ Set GITHUB_TOKEN for GHCR access: `export GITHUB_TOKEN=your_token`
+→ Get token at: https://github.com/settings/tokens
+
 ## What's Under the Hood
 
 This plugin is built with the official Packer SDK and leverages Meda's Cloud-Hypervisor backend for maximum performance. It handles the complete VM lifecycle - create, provision, snapshot, cleanup - so you don't have to think about it.

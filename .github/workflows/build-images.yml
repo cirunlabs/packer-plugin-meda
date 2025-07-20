@@ -199,6 +199,8 @@ jobs:
         run: |
           cd images/${{ matrix.image }}
           packer build .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
@@ -206,7 +208,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Extract image metadata
         id: meta
@@ -254,6 +256,7 @@ jobs:
           echo "🏷️ Full image name: ${{ steps.meta.outputs.full-image-name }}"
 
           # Push image using Meda (correct syntax)
+          GITHUB_TOKEN="${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}" \
           meda push "$local_image" "${{ steps.meta.outputs.full-image-name }}" \
             --registry "${{ env.REGISTRY }}"
 

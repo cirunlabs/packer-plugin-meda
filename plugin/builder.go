@@ -55,13 +55,13 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 		&stepCreateVM{},
 		&stepStartVM{},
 		&stepWaitForVM{},
-		
+
 		// SSH Key Generation (conditional - only if using key pair auth)
 		multistep.If(b.config.Comm.Type == "ssh" && b.config.Comm.SSHPrivateKeyFile == "" && b.config.Comm.SSHPassword == "",
 			&communicator.StepSSHKeyGen{
 				CommConf: &b.config.Comm,
 			}),
-		
+
 		// SSH Connection
 		&communicator.StepConnect{
 			Config: &b.config.Comm,
@@ -79,10 +79,10 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 				return sshConfig, nil
 			},
 		},
-		
+
 		// Provisioning
 		&commonsteps.StepProvision{},
-		
+
 		&stepStopVM{},
 		&stepCreateImage{},
 		&stepPushImage{},

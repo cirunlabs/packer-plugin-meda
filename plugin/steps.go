@@ -73,7 +73,7 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 		if err != nil {
 			return multistep.ActionHalt
 		}
-		
+
 		// Start the command
 		if err := pullCmd.Start(); err != nil {
 			err := fmt.Errorf("failed to start pull command: %s", err)
@@ -81,25 +81,45 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
-		
+
 		// Read and display output in real-time
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			ui.Say(scanner.Text())
-		}
-		
-		// Also capture stderr
-		stderrScanner := bufio.NewScanner(stderr)
+		var stderrOutput strings.Builder
+
+		// Handle stdout
 		go func() {
-			for stderrScanner.Scan() {
-				ui.Say(stderrScanner.Text())
+			scanner := bufio.NewScanner(stdout)
+			for scanner.Scan() {
+				ui.Say(scanner.Text())
 			}
 		}()
-		
+
+		// Handle stderr and capture it for error checking
+		go func() {
+			stderrScanner := bufio.NewScanner(stderr)
+			for stderrScanner.Scan() {
+				line := stderrScanner.Text()
+				stderrOutput.WriteString(line + "\n")
+				ui.Say(line)
+			}
+		}()
+
 		// Wait for command to finish
 		pullErr := pullCmd.Wait()
-		if pullErr != nil {
-			err := fmt.Errorf("failed to pull base image '%s': %s", config.BaseImage, pullErr)
+
+		// Give goroutines a moment to finish reading
+		time.Sleep(100 * time.Millisecond)
+
+		// Check for errors in stderr content
+		stderrContent := stderrOutput.String()
+		if pullErr != nil || strings.Contains(stderrContent, "unauthorized") || strings.Contains(stderrContent, "denied") {
+			errorMsg := fmt.Sprintf("failed to pull base image '%s'", config.BaseImage)
+			if pullErr != nil {
+				errorMsg += fmt.Sprintf(": %s", pullErr)
+			}
+			if stderrContent != "" {
+				errorMsg += fmt.Sprintf(" - %s", strings.TrimSpace(stderrContent))
+			}
+			err := fmt.Errorf(errorMsg)
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
@@ -279,7 +299,7 @@ func (s *stepWaitForVM) Run(ctx context.Context, state multistep.StateBag) multi
 						}
 					}
 				}
-				
+
 				if ip != "" && ip != "null" {
 					state.Put("vm_ip", ip)
 					state.Put("instance_ip", ip)
@@ -459,7 +479,7 @@ func (s *stepPushImage) Run(ctx context.Context, state multistep.StateBag) multi
 	if err != nil {
 		return multistep.ActionHalt
 	}
-	
+
 	// Start the command
 	if err := cmd.Start(); err != nil {
 		err := fmt.Errorf("failed to start push command: %s", err)
@@ -467,25 +487,45 @@ func (s *stepPushImage) Run(ctx context.Context, state multistep.StateBag) multi
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
-	
+
 	// Read and display output in real-time
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		ui.Say(scanner.Text())
-	}
-	
-	// Also capture stderr
-	stderrScanner := bufio.NewScanner(stderr)
+	var stderrOutput strings.Builder
+
+	// Handle stdout
 	go func() {
-		for stderrScanner.Scan() {
-			ui.Say(stderrScanner.Text())
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			ui.Say(scanner.Text())
 		}
 	}()
-	
+
+	// Handle stderr and capture it for error checking
+	go func() {
+		stderrScanner := bufio.NewScanner(stderr)
+		for stderrScanner.Scan() {
+			line := stderrScanner.Text()
+			stderrOutput.WriteString(line + "\n")
+			ui.Say(line)
+		}
+	}()
+
 	// Wait for command to finish
 	pushErr := cmd.Wait()
-	if pushErr != nil {
-		err := fmt.Errorf("failed to push image: %s", pushErr)
+
+	// Give goroutines a moment to finish reading
+	time.Sleep(100 * time.Millisecond)
+
+	// Check for errors in stderr content
+	stderrContent := stderrOutput.String()
+	if pushErr != nil || strings.Contains(stderrContent, "unauthorized") || strings.Contains(stderrContent, "denied") || strings.Contains(stderrContent, "authentication required") {
+		errorMsg := fmt.Sprintf("failed to push image")
+		if pushErr != nil {
+			errorMsg += fmt.Sprintf(": %s", pushErr)
+		}
+		if stderrContent != "" {
+			errorMsg += fmt.Sprintf(" - %s", strings.TrimSpace(stderrContent))
+		}
+		err := fmt.Errorf(errorMsg)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
