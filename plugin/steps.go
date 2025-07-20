@@ -26,12 +26,18 @@ func getMedaDir() (string, error) {
 	return filepath.Join(currentUser.HomeDir, "meda"), nil
 }
 
-// stepPullImage ensures the base image is available locally
-type stepPullImage struct{}
+// stepCreateBaseImage ensures the base image is available locally by creating it
+type stepCreateBaseImage struct{}
 
-func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
+func (s *stepCreateBaseImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
+
+	// Extract base image name without tag (e.g., "ubuntu-base:latest" -> "ubuntu-base")
+	baseImageName := config.BaseImage
+	if strings.Contains(baseImageName, ":") {
+		baseImageName = strings.Split(baseImageName, ":")[0]
+	}
 
 	ui.Say(fmt.Sprintf("Ensuring base image '%s' is available locally", config.BaseImage))
 
@@ -57,22 +63,32 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 	}
 
 	output, err := checkCmd.CombinedOutput()
-	imageExists := err == nil && strings.Contains(string(output), config.BaseImage)
+	imageExists := err == nil && strings.Contains(string(output), baseImageName)
 
 	if !imageExists {
-		ui.Say(fmt.Sprintf("Base image '%s' not found locally, pulling from registry...", config.BaseImage))
+		// For ubuntu-base, create from ubuntu base. For ubuntu, create basic ubuntu image
+		if baseImageName == "ubuntu-base" {
+			ui.Say("Base image 'ubuntu-base' not found locally, creating from ubuntu...")
+			// First ensure ubuntu base image exists
+			if err := s.ensureUbuntuBaseImage(config, ui); err != nil {
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
+		} else {
+			ui.Say(fmt.Sprintf("Base image '%s' not found locally, creating basic Ubuntu image...", baseImageName))
+		}
 
-		var pullCmd *exec.Cmd
+		var createCmd *exec.Cmd
 		if config.UseAPI {
-			// Use API to pull image
-			pullCmd = exec.Command("curl", "-X", "POST",
-				fmt.Sprintf("http://%s:%d/api/v1/images/pull", config.MedaHost, config.MedaPort),
+			// Use API to create image
+			createCmd = exec.Command("curl", "-X", "POST",
+				fmt.Sprintf("http://%s:%d/api/v1/images", config.MedaHost, config.MedaPort),
 				"-H", "Content-Type: application/json",
 				"-d", fmt.Sprintf(`{
-					"image": "%s",
-					"registry": "ghcr.io",
-					"org": "cirunlabs"
-				}`, config.BaseImage))
+					"name": "%s",
+					"tag": "latest"
+				}`, baseImageName))
 		} else {
 			if config.MedaBinary == "cargo" {
 				medaDir, err := getMedaDir()
@@ -82,26 +98,26 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 					ui.Error(err.Error())
 					return multistep.ActionHalt
 				}
-				pullCmd = exec.Command("cargo", "run", "--", "pull", config.BaseImage)
-				pullCmd.Dir = medaDir
+				createCmd = exec.Command("cargo", "run", "--", "create-image", baseImageName)
+				createCmd.Dir = medaDir
 			} else {
-				pullCmd = exec.Command(config.MedaBinary, "pull", config.BaseImage)
+				createCmd = exec.Command(config.MedaBinary, "create-image", baseImageName)
 			}
 		}
 
 		// Create pipes to capture and display output
-		stdout, err := pullCmd.StdoutPipe()
+		stdout, err := createCmd.StdoutPipe()
 		if err != nil {
 			return multistep.ActionHalt
 		}
-		stderr, err := pullCmd.StderrPipe()
+		stderr, err := createCmd.StderrPipe()
 		if err != nil {
 			return multistep.ActionHalt
 		}
 
 		// Start the command
-		if err := pullCmd.Start(); err != nil {
-			err := fmt.Errorf("failed to start pull command: %s", err)
+		if err := createCmd.Start(); err != nil {
+			err := fmt.Errorf("failed to start create-image command: %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
@@ -129,28 +145,20 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 		}()
 
 		// Wait for command to finish
-		pullErr := pullCmd.Wait()
+		createErr := createCmd.Wait()
 
 		// Give goroutines a moment to finish reading
 		time.Sleep(100 * time.Millisecond)
 
-		// Check for errors in stderr content
+		// Check for errors
 		stderrContent := stderrOutput.String()
-		if pullErr != nil || strings.Contains(stderrContent, "unauthorized") || strings.Contains(stderrContent, "denied") || strings.Contains(stderrContent, "permission denied") {
-			errorMsg := fmt.Sprintf("failed to pull base image '%s'", config.BaseImage)
-			if pullErr != nil {
-				errorMsg += fmt.Sprintf(": %s", pullErr)
+		if createErr != nil {
+			errorMsg := fmt.Sprintf("failed to create base image '%s'", baseImageName)
+			if createErr != nil {
+				errorMsg += fmt.Sprintf(": %s", createErr)
 			}
 			if stderrContent != "" {
 				errorMsg += fmt.Sprintf(" - %s", strings.TrimSpace(stderrContent))
-			}
-
-			// Add helpful context for common issues
-			if strings.Contains(stderrContent, "permission denied") {
-				errorMsg += "\n💡 This may be a Meda permissions issue. Try running with proper permissions or check Meda installation."
-			}
-			if strings.Contains(stderrContent, "--password via the CLI is insecure") {
-				errorMsg += "\n⚠️  The password CLI warning is a known Meda limitation, not a plugin issue."
 			}
 
 			err := fmt.Errorf(errorMsg)
@@ -159,16 +167,60 @@ func (s *stepPullImage) Run(ctx context.Context, state multistep.StateBag) multi
 			return multistep.ActionHalt
 		}
 
-		ui.Say(fmt.Sprintf("Successfully pulled base image '%s'", config.BaseImage))
+		ui.Say(fmt.Sprintf("Successfully created base image '%s'", baseImageName))
 	} else {
-		ui.Say(fmt.Sprintf("Base image '%s' already available locally", config.BaseImage))
+		ui.Say(fmt.Sprintf("Base image '%s' already available locally", baseImageName))
 	}
 
 	return multistep.ActionContinue
 }
 
-func (s *stepPullImage) Cleanup(state multistep.StateBag) {
-	// No cleanup needed for image pull
+// ensureUbuntuBaseImage creates the ubuntu base image if it doesn't exist
+func (s *stepCreateBaseImage) ensureUbuntuBaseImage(config *Config, ui packer.Ui) error {
+	// Check if ubuntu image exists
+	var checkCmd *exec.Cmd
+	if config.MedaBinary == "cargo" {
+		medaDir, err := getMedaDir()
+		if err != nil {
+			return fmt.Errorf("failed to get meda directory: %s", err)
+		}
+		checkCmd = exec.Command("cargo", "run", "--", "images")
+		checkCmd.Dir = medaDir
+	} else {
+		checkCmd = exec.Command(config.MedaBinary, "images")
+	}
+
+	output, err := checkCmd.CombinedOutput()
+	ubuntuExists := err == nil && strings.Contains(string(output), "ubuntu")
+
+	if !ubuntuExists {
+		ui.Say("Creating basic Ubuntu image first...")
+
+		var createCmd *exec.Cmd
+		if config.MedaBinary == "cargo" {
+			medaDir, err := getMedaDir()
+			if err != nil {
+				return fmt.Errorf("failed to get meda directory: %s", err)
+			}
+			createCmd = exec.Command("cargo", "run", "--", "create-image", "ubuntu")
+			createCmd.Dir = medaDir
+		} else {
+			createCmd = exec.Command(config.MedaBinary, "create-image", "ubuntu")
+		}
+
+		output, err := createCmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to create ubuntu base image: %s - %s", err, string(output))
+		}
+
+		ui.Say("Successfully created basic Ubuntu image")
+	}
+
+	return nil
+}
+
+func (s *stepCreateBaseImage) Cleanup(state multistep.StateBag) {
+	// No cleanup needed for image creation
 }
 
 // stepCreateVM creates a new VM using Meda

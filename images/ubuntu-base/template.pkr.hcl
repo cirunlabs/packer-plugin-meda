@@ -37,7 +37,7 @@ source "meda-vm" "ubuntu-base" {
   disk_size         = "20G"
 
   # Output configuration
-  output_image_name = "ubuntu-base"
+  output_image_name = "ubuntu"
   output_tag        = var.image_tag
   registry          = var.registry
   organization      = var.organization
