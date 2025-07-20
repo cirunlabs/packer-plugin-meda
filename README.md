@@ -196,6 +196,71 @@ Found a bug? Have an idea? We're all ears:
 4. **Test it** - Ensure everything works
 5. **Ship it** - Submit a pull request
 
+## Releasing
+
+To create a new release of the plugin:
+
+### 1. Update Version
+
+First, update the version in the plugin code:
+
+```bash
+cd plugin
+# Update version in main.go if needed
+vim main.go
+```
+
+### 2. Create and Push Tag
+
+```bash
+# Create a new tag (replace with actual version)
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### 3. Automated Release
+
+The release workflow will automatically:
+- Build binaries for all supported platforms (Linux, macOS, Windows)
+- Generate checksums
+- Create a GitHub release with release notes
+- Upload all artifacts
+
+### 4. Manual Steps (if needed)
+
+If something goes wrong with the automated release:
+
+```bash
+# Install GoReleaser locally
+go install github.com/goreleaser/goreleaser@latest
+
+# Test the release (dry run)
+cd plugin
+goreleaser release --snapshot --clean
+
+# Create actual release (requires GITHUB_TOKEN)
+export GITHUB_TOKEN=your_token_here
+goreleaser release --clean
+```
+
+### 5. Verify Release
+
+After release:
+1. Check the [releases page](https://github.com/cirunlabs/packer-plugin-meda/releases)
+2. Download and test binaries
+3. Verify checksums match
+4. Test installation instructions
+
+### Release Checklist
+
+- [ ] All tests pass
+- [ ] Documentation is up to date
+- [ ] Version is bumped
+- [ ] Tag is created and pushed
+- [ ] GitHub Actions workflow completes successfully
+- [ ] Release artifacts are uploaded
+- [ ] Installation instructions work
+
 ## License
 
 This project is licensed under the Mozilla Public License Version 2.0 - see the [LICENSE](LICENSE) file for details.
