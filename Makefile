@@ -61,7 +61,7 @@ build-images: install-plugin start-meda ## Build ubuntu-base VM image
 	@echo "🏗️ Building ubuntu-base image..."
 	@if [ -f "images/ubuntu-base/template.pkr.hcl" ]; then \
 		echo "Building ubuntu-base image..."; \
-		cd "images/ubuntu-base" && packer build template.pkr.hcl && cd ../..; \
+		cd "images/ubuntu-base" && MEDA_BINARY_PATH="${MEDA_BINARY_PATH}" packer build template.pkr.hcl && cd ../..; \
 	else \
 		echo "❌ ubuntu-base template not found"; \
 		exit 1; \
@@ -81,18 +81,20 @@ endif
 		exit 1; \
 	fi
 	@echo "🏗️ Building image: $(IMAGE)..."
-	cd images/$(IMAGE) && packer build template.pkr.hcl
+	cd images/$(IMAGE) && MEDA_BINARY_PATH="${MEDA_BINARY_PATH}" packer build template.pkr.hcl
 	@echo "✅ Image $(IMAGE) built successfully!"
 
 # Start Meda API server in background
 start-meda: ## Start Meda API server
 	@echo "🚀 Starting Meda API server..."
-	@if ! pgrep -f "meda serve" > /dev/null; then \
+	@MEDA_CMD="${MEDA_BINARY_PATH:-meda}"; \
+	if ! pgrep -f "$$MEDA_CMD serve" > /dev/null; then \
 		echo "📝 Meda logs will be written to /tmp/meda-server.log"; \
-		meda serve --host 127.0.0.1 --port 7777 > /tmp/meda-server.log 2>&1 & \
+		echo "🔧 Using meda binary: $$MEDA_CMD"; \
+		$$MEDA_CMD serve --host 127.0.0.1 --port 7777 > /tmp/meda-server.log 2>&1 & \
 		sleep 5; \
 		if curl -sf http://127.0.0.1:7777/api/v1/health > /dev/null; then \
-			echo "✅ Meda API server started successfully (PID: $$(pgrep -f 'meda serve'))"; \
+			echo "✅ Meda API server started successfully (PID: $$(pgrep -f '$$MEDA_CMD serve'))"; \
 			echo "💡 View logs with: tail -f /tmp/meda-server.log"; \
 		else \
 			echo "❌ Failed to start Meda API server"; \

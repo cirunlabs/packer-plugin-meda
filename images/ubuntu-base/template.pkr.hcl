@@ -28,13 +28,19 @@ variable "dry_run" {
   description = "Dry run mode"
 }
 
+variable "meda_binary_path" {
+  type        = string
+  default     = env("MEDA_BINARY_PATH") != "" ? env("MEDA_BINARY_PATH") : "meda"
+  description = "Path to the meda binary to use"
+}
+
 source "meda-vm" "ubuntu-base" {
   # VM configuration
   vm_name           = "ubuntu-base-build"
   base_image        = "ubuntu-base:latest"
   memory            = "2G"
   cpus              = 4
-  disk_size         = "20G"
+  disk_size         = "12G"
 
   # Output configuration
   output_image_name = "ubuntu"
@@ -47,7 +53,7 @@ source "meda-vm" "ubuntu-base" {
   dry_run           = var.dry_run
 
   # Use meda binary
-  meda_binary = "meda"
+  meda_binary = var.meda_binary_path
 
   # SSH configuration
   ssh_username = "cirun"
@@ -74,7 +80,7 @@ build {
     inline = [
       "echo 'Updating system packages...'",
       "sudo apt-get update",
-      "sudo apt-get upgrade -y"
+      "sudo apt-get upgrade -y",
       "df -h"
     ]
   }
@@ -124,7 +130,9 @@ build {
       "sudo rm -rf /root/.cache/*",
       "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
       "sudo rm -rf /var/log/journal/*",
-      "echo 'Image preparation completed'"
+      "echo 'Image preparation completed'",
+      "echo 'Build completed at $(date)' > /tmp/build-info",
+      "echo 'CI trigger update'"
     ]
   }
 

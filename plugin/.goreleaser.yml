@@ -1,64 +1,66 @@
+version: 2
+
 project_name: packer-plugin-meda
+
+env:
+  - CGO_ENABLED=0
 
 before:
   hooks:
+    - go test ./...
     - go mod tidy
+    - make plugin-check
 
 builds:
-  - id: plugin
-    binary: packer-plugin-meda
-    env:
-      - CGO_ENABLED=0
+  - id: linux-amd64
+    binary: packer-plugin-meda_v{{.Version}}_x5.0_linux_amd64
     goos:
       - linux
-      - darwin
-      - windows
     goarch:
       - amd64
-      - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
+    flags:
+      - -trimpath
     ldflags:
-      - -s -w
-      - -X main.Version={{.Version}}
-      - -X main.VersionPrerelease=
+      - -s -w -X main.Version={{.Version}} -X main.VersionPrerelease=
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+  - id: linux-arm64
+    binary: packer-plugin-meda_v{{.Version}}_x5.0_linux_arm64
+    goos:
+      - linux
+    goarch:
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.VersionPrerelease=
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 archives:
-  - id: plugin
-    builds:
-      - plugin
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format: zip
+  - id: linux-amd64
+    ids:
+      - linux-amd64
+    name_template: "packer-plugin-meda_v{{ .Version }}_x5.0_linux_amd64"
+    formats: [zip]
     files:
       - LICENSE*
       - README*
-      - CHANGELOG*
+
+  - id: linux-arm64
+    ids:
+      - linux-arm64
+    name_template: "packer-plugin-meda_v{{ .Version }}_x5.0_linux_arm64"
+    formats: [zip]
+    files:
+      - LICENSE*
+      - README*
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
 
 changelog:
-  sort: asc
-  use: github
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
-      - '^ci:'
-      - Merge pull request
-      - Merge branch
-  groups:
-    - title: Features
-      regexp: "^.*feat[(\\w)]*:+.*$"
-      order: 0
-    - title: 'Bug fixes'
-      regexp: "^.*fix[(\\w)]*:+.*$"
-      order: 1
-    - title: Others
-      order: 999
+  disable: true
 
 release:
   draft: false
@@ -72,13 +74,13 @@ release:
     ### Installation
 
     ```bash
-    # Download the appropriate binary for your platform
-    curl -LO https://github.com/cirunlabs/packer-plugin-meda/releases/download/v{{ .Version }}/packer-plugin-meda_{{ .Version }}_linux_amd64.zip
+    # Install using packer init (recommended)
+    packer init github.com/cirunlabs/meda
 
-    # Extract and install
-    unzip packer-plugin-meda_{{ .Version }}_linux_amd64.zip
-    chmod +x packer-plugin-meda
-    packer plugins install --path packer-plugin-meda github.com/cirunlabs/meda
+    # Or download manually
+    curl -LO https://github.com/cirunlabs/packer-plugin-meda/releases/download/v{{ .Version }}/packer-plugin-meda_v{{ .Version }}_x5.0_linux_amd64.zip
+    unzip packer-plugin-meda_v{{ .Version }}_x5.0_linux_amd64.zip
+    packer plugins install --path packer-plugin-meda_v{{ .Version }}_x5.0_linux_amd64 github.com/cirunlabs/meda
     ```
 
     ### Usage
@@ -86,12 +88,7 @@ release:
     See the [documentation](https://github.com/cirunlabs/packer-plugin-meda/blob/main/README.md) for usage examples.
   footer: |
     **Full Changelog**: https://github.com/cirunlabs/packer-plugin-meda/compare/{{ .PreviousTag }}...v{{ .Tag }}
+  extra_files:
+    - glob: ./docs/**/DOCS.md
 
-snapshot:
-  name_template: "{{ .Version }}-SNAPSHOT-{{ .ShortCommit }}"
-
-# Remove GPG signing for now - can be added later if needed
-# signs:
-#   - artifacts: checksum
-#     cmd: gpg
-#     args: ["--batch", "--local-user", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]
+snapshot: {}

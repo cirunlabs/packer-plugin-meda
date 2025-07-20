@@ -18,7 +18,7 @@ PLUGIN_BINARY = packer-plugin-meda
 PLUGIN_INSTALL_PATH = ~/.config/packer/plugins/github.com/cirunlabs/meda/
 MEDA_DIR = ..
 
-.PHONY: help build-plugin install-plugin init validate build push dry-run clean all check-auth config
+.PHONY: help build-plugin plugin-check install-plugin init validate build push dry-run clean all check-auth config
 
 ## Default target
 all: build-plugin install-plugin validate build
@@ -56,7 +56,12 @@ help:
 ## Build the Packer plugin
 build-plugin:
 	@echo "Building Packer plugin..."
-	go generate . && go mod tidy && go build -o $(PLUGIN_BINARY) .
+	go mod tidy && go build -o $(PLUGIN_BINARY) .
+
+## Check plugin compatibility (for releases)
+plugin-check: build-plugin
+	@echo "Checking plugin compatibility..."
+	./$(PLUGIN_BINARY) describe
 
 ## Install the Packer plugin
 install-plugin: build-plugin

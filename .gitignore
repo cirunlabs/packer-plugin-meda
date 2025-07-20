@@ -40,3 +40,5 @@ plugin/dist/
 *.tar.gz
 *.zip
 manifest.json
+artifacts/
+goreleaser

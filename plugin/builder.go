@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/crypto/ssh"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
+	"golang.org/x/crypto/ssh"
 )
 
 const BuilderId = "meda.vm"
@@ -46,7 +46,7 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 	state.Put("ui", ui)
 
 	// Generate unique VM name
-	vmName := fmt.Sprintf("packer-%s-%d", b.config.VMName, time.Now().Unix())
+	vmName := "packer-" + b.config.VMName + "-" + fmt.Sprintf("%d", time.Now().Unix())
 	state.Put("vm_name", vmName)
 
 	// Build the steps
@@ -136,3 +136,4 @@ func (b *Builder) GeneratedVars() []string {
 		"MedaVMIP",
 	}
 }
+

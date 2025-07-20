@@ -31,9 +31,9 @@ func (a *Artifact) Id() string {
 // String returns a human-readable representation of this artifact
 func (a *Artifact) String() string {
 	if a.PushedImage != "" {
-		return fmt.Sprintf("Meda image: %s (pushed to %s)", a.ImageName, a.PushedImage)
+		return "Meda image: " + a.ImageName + " (pushed to " + a.PushedImage + ")"
 	}
-	return fmt.Sprintf("Meda image: %s", a.ImageName)
+	return "Meda image: " + a.ImageName
 }
 
 // State returns the state data for this artifact
@@ -74,3 +74,4 @@ func (a *Artifact) Destroy() error {
 
 	return nil
 }
+

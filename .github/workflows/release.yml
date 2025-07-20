@@ -17,54 +17,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Determine Go version
+        id: go
+        run: |
+          if [ -f plugin/.go-version ]; then
+            echo "version=$(cat plugin/.go-version)" >> $GITHUB_OUTPUT
+          elif [ -f plugin/go.mod ]; then
+            echo "version=$(grep '^go ' plugin/go.mod | awk '{print $2}')" >> $GITHUB_OUTPUT
+          else
+            echo "version=1.21" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: ${{ steps.go.outputs.version }}
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
           args: release --clean
           workdir: plugin
         env:
-          GITHUB_TOKEN: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: cirunlabs/packer-plugin-meda
-
-      - name: Generate plugin manifest
-        run: |
-          cd plugin
-
-          # Extract version from tag
-          VERSION="${GITHUB_REF#refs/tags/}"
-
-          # Create plugin manifest for Packer Registry
-          cat > plugin-manifest.json << EOF
-          {
-            "name": "meda",
-            "version": "${VERSION}",
-            "description": "Packer plugin for building VM images with Meda Cloud-Hypervisor",
-            "author": "CirunLabs",
-            "license": "MPL-2.0",
-            "source": "https://github.com/cirunlabs/packer-plugin-meda",
-            "releases": [
-              {
-                "version": "${VERSION}",
-                "url": "https://github.com/cirunlabs/packer-plugin-meda/releases/tag/${VERSION}",
-                "sha256_checksums_url": "https://github.com/cirunlabs/packer-plugin-meda/releases/download/${VERSION}/checksums.txt"
-              }
-            ]
-          }
-          EOF
-
-      - name: Upload plugin manifest
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: plugin/plugin-manifest.json
-          asset_name: plugin-manifest.json
-          asset_content_type: application/json
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

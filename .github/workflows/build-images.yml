@@ -26,7 +26,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
-  MEDA_VERSION: v0.2
+  MEDA_VERSION: v0.3.2
   PACKER_VERSION: 1.10.0
 
 jobs:
@@ -110,12 +110,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
       - name: Cache Go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/go-build
@@ -123,6 +123,13 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo usermod -a -G kvm $USER
 
       - name: Install system dependencies
         run: |
@@ -133,7 +140,10 @@ jobs:
             bridge-utils \
             iptables \
             curl \
-            jq
+            jq \
+            qemu-kvm \
+            libvirt-daemon-system \
+            libvirt-clients
 
       - name: Download and install Meda
         run: |
@@ -183,8 +193,22 @@ jobs:
           cd images/${{ matrix.image }}
           packer validate .
 
-      - name: Debugging with tmate
-        uses: mxschmitt/action-tmate@v3.22
+      - name: Check disk space before cleanup
+        run: df -h
+
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Check disk space after cleanup
+        run: df -h
 
       - name: Build image with Packer
         run: |
@@ -230,26 +254,6 @@ jobs:
           echo "full-image-name=${full_image_name}" >> $GITHUB_OUTPUT
           echo "description=${image_description}" >> $GITHUB_OUTPUT
 
-      - name: Push image to registry
-        if: github.event_name != 'pull_request'
-        run: |
-          # Get the locally built image name from Packer output
-          local_image=$(meda images list --json | jq -r '.[] | select(.name | contains("${{ matrix.image }}")) | .name' | head -1)
-
-          if [ -z "$local_image" ]; then
-            echo "Error: Could not find built image for ${{ matrix.image }}"
-            exit 1
-          fi
-
-          # Push image using Meda with verbose output
-          echo "🚀 Pushing image: $local_image → ${{ steps.meta.outputs.full-image-name }}"
-          echo "📝 Registry: ${{ env.REGISTRY }}"
-          echo "🏷️ Full image name: ${{ steps.meta.outputs.full-image-name }}"
-
-          # Push image using Meda (correct syntax)
-          GITHUB_TOKEN="${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}" \
-          meda push "$local_image" "${{ steps.meta.outputs.full-image-name }}" \
-            --registry "${{ env.REGISTRY }}"
 
       - name: Generate build summary
         run: |

@@ -39,7 +39,7 @@ func (s *stepCreateBaseImage) Run(ctx context.Context, state multistep.StateBag)
 		baseImageName = strings.Split(baseImageName, ":")[0]
 	}
 
-	ui.Say(fmt.Sprintf("Ensuring base image '%s' is available locally", config.BaseImage))
+	ui.Say("Ensuring base image '" + config.BaseImage + "' is available locally")
 
 	// First check if image exists locally
 	var checkCmd *exec.Cmd
@@ -76,7 +76,7 @@ func (s *stepCreateBaseImage) Run(ctx context.Context, state multistep.StateBag)
 				return multistep.ActionHalt
 			}
 		} else {
-			ui.Say(fmt.Sprintf("Base image '%s' not found locally, creating basic Ubuntu image...", baseImageName))
+			ui.Say("Base image '" + baseImageName + "' not found locally, creating basic Ubuntu image...")
 		}
 
 		var createCmd *exec.Cmd
@@ -153,23 +153,23 @@ func (s *stepCreateBaseImage) Run(ctx context.Context, state multistep.StateBag)
 		// Check for errors
 		stderrContent := stderrOutput.String()
 		if createErr != nil {
-			errorMsg := fmt.Sprintf("failed to create base image '%s'", baseImageName)
+			errorMsg := "failed to create base image '" + baseImageName + "'"
 			if createErr != nil {
-				errorMsg += fmt.Sprintf(": %s", createErr)
+				errorMsg += ": " + createErr.Error()
 			}
 			if stderrContent != "" {
-				errorMsg += fmt.Sprintf(" - %s", strings.TrimSpace(stderrContent))
+				errorMsg += " - " + strings.TrimSpace(stderrContent)
 			}
 
-			err := fmt.Errorf(errorMsg)
+			err := fmt.Errorf("%s", errorMsg)
 			state.Put("error", err)
-			ui.Error(err.Error())
+			ui.Error(errorMsg)
 			return multistep.ActionHalt
 		}
 
-		ui.Say(fmt.Sprintf("Successfully created base image '%s'", baseImageName))
+		ui.Say("Successfully created base image '" + baseImageName + "'")
 	} else {
-		ui.Say(fmt.Sprintf("Base image '%s' already available locally", baseImageName))
+		ui.Say("Base image '" + baseImageName + "' already available locally")
 	}
 
 	return multistep.ActionContinue
@@ -231,7 +231,7 @@ func (s *stepCreateVM) Run(ctx context.Context, state multistep.StateBag) multis
 	ui := state.Get("ui").(packer.Ui)
 	vmName := state.Get("vm_name").(string)
 
-	ui.Say(fmt.Sprintf("Creating VM '%s' with base image '%s'", vmName, config.BaseImage))
+	ui.Say("Creating VM '" + vmName + "' with base image '" + config.BaseImage + "'")
 
 	var cmd *exec.Cmd
 	if config.UseAPI {
@@ -284,7 +284,7 @@ func (s *stepCreateVM) Run(ctx context.Context, state multistep.StateBag) multis
 		return multistep.ActionHalt
 	}
 
-	ui.Say(fmt.Sprintf("VM '%s' created successfully", vmName))
+	ui.Say("VM '" + vmName + "' created successfully")
 	return multistep.ActionContinue
 }
 
@@ -300,7 +300,7 @@ func (s *stepStartVM) Run(ctx context.Context, state multistep.StateBag) multist
 	ui := state.Get("ui").(packer.Ui)
 	vmName := state.Get("vm_name").(string)
 
-	ui.Say(fmt.Sprintf("Starting VM '%s'", vmName))
+	ui.Say("Starting VM '" + vmName + "'")
 
 	var cmd *exec.Cmd
 	if config.UseAPI {
@@ -330,7 +330,7 @@ func (s *stepStartVM) Run(ctx context.Context, state multistep.StateBag) multist
 		return multistep.ActionHalt
 	}
 
-	ui.Say(fmt.Sprintf("VM '%s' started successfully", vmName))
+	ui.Say("VM '" + vmName + "' started successfully")
 	return multistep.ActionContinue
 }
 
@@ -344,7 +344,7 @@ func (s *stepWaitForVM) Run(ctx context.Context, state multistep.StateBag) multi
 	ui := state.Get("ui").(packer.Ui)
 	vmName := state.Get("vm_name").(string)
 
-	ui.Say(fmt.Sprintf("Waiting for VM '%s' to be ready...", vmName))
+	ui.Say("Waiting for VM '" + vmName + "' to be ready...")
 
 	// Wait for VM to be running and get IP
 	timeout := time.After(5 * time.Minute)
@@ -368,7 +368,7 @@ func (s *stepWaitForVM) Run(ctx context.Context, state multistep.StateBag) multi
 					medaDir, err := getMedaDir()
 					if err != nil {
 						// Just log and return error for this specific case
-						ui.Error(fmt.Sprintf("failed to get meda directory: %s", err))
+						ui.Error("failed to get meda directory: " + err.Error())
 						return multistep.ActionHalt
 					}
 					cmd = exec.Command("cargo", "run", "--", "ip", vmName)
@@ -411,7 +411,7 @@ func (s *stepWaitForVM) Run(ctx context.Context, state multistep.StateBag) multi
 					state.Put("instance_ip", ip)
 					// Set SSH host in the communicator config
 					config.Comm.SSHHost = ip
-					ui.Say(fmt.Sprintf("VM is ready with IP: %s", ip))
+					ui.Say("VM is ready with IP: " + ip)
 					return multistep.ActionContinue
 				}
 			}
@@ -430,7 +430,7 @@ func (s *stepStopVM) Run(ctx context.Context, state multistep.StateBag) multiste
 	ui := state.Get("ui").(packer.Ui)
 	vmName := state.Get("vm_name").(string)
 
-	ui.Say(fmt.Sprintf("Stopping VM '%s'", vmName))
+	ui.Say("Stopping VM '" + vmName + "'")
 
 	var cmd *exec.Cmd
 	if config.UseAPI {
@@ -439,7 +439,11 @@ func (s *stepStopVM) Run(ctx context.Context, state multistep.StateBag) multiste
 	} else {
 		if config.MedaBinary == "cargo" {
 			cmd = exec.Command("cargo", "run", "--", "stop", vmName)
-			medaDir, err := getMedaDir(); if err != nil { return multistep.ActionHalt }; cmd.Dir = medaDir
+			medaDir, err := getMedaDir()
+			if err != nil {
+				return multistep.ActionHalt
+			}
+			cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, "stop", vmName)
 		}
@@ -450,7 +454,7 @@ func (s *stepStopVM) Run(ctx context.Context, state multistep.StateBag) multiste
 		log.Printf("Warning: failed to stop VM: %s - %s", err, string(output))
 		// Continue anyway - VM might already be stopped
 	} else {
-		ui.Say(fmt.Sprintf("VM '%s' stopped successfully", vmName))
+		ui.Say("VM '" + vmName + "' stopped successfully")
 	}
 
 	return multistep.ActionContinue
@@ -467,7 +471,7 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 	vmName := state.Get("vm_name").(string)
 
 	imageName := fmt.Sprintf("%s:%s", config.OutputImageName, config.OutputTag)
-	ui.Say(fmt.Sprintf("Creating image '%s' from VM '%s'", imageName, vmName))
+	ui.Say("Creating image '" + imageName + "' from VM '" + vmName + "'")
 
 	var cmd *exec.Cmd
 	if config.UseAPI {
@@ -484,7 +488,11 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 			cmd = exec.Command("cargo", "run", "--", "create-image", config.OutputImageName,
 				"--tag", config.OutputTag,
 				"--from-vm", vmName)
-			medaDir, err := getMedaDir(); if err != nil { return multistep.ActionHalt }; cmd.Dir = medaDir
+			medaDir, err := getMedaDir()
+			if err != nil {
+				return multistep.ActionHalt
+			}
+			cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, "create-image", config.OutputImageName,
 				"--tag", config.OutputTag,
@@ -501,7 +509,7 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 
 	state.Put("image_name", imageName)
-	ui.Say(fmt.Sprintf("Image '%s' created successfully", imageName))
+	ui.Say("Image '" + imageName + "' created successfully")
 	return multistep.ActionContinue
 }
 
@@ -540,7 +548,7 @@ func (s *stepPushImage) Run(ctx context.Context, state multistep.StateBag) multi
 		targetImage = fmt.Sprintf("%s/%s:%s", config.Registry, config.OutputImageName, config.OutputTag)
 	}
 
-	ui.Say(fmt.Sprintf("Pushing image '%s' to '%s'", imageName, targetImage))
+	ui.Say("Pushing image '" + imageName + "' to '" + targetImage + "'")
 
 	var cmd *exec.Cmd
 	if config.UseAPI {
@@ -570,7 +578,11 @@ func (s *stepPushImage) Run(ctx context.Context, state multistep.StateBag) multi
 		if config.MedaBinary == "cargo" {
 			cargoArgs := append([]string{"run", "--"}, args...)
 			cmd = exec.Command("cargo", cargoArgs...)
-			medaDir, err := getMedaDir(); if err != nil { return multistep.ActionHalt }; cmd.Dir = medaDir
+			medaDir, err := getMedaDir()
+			if err != nil {
+				return multistep.ActionHalt
+			}
+			cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, args...)
 		}
@@ -624,20 +636,20 @@ func (s *stepPushImage) Run(ctx context.Context, state multistep.StateBag) multi
 	// Check for errors in stderr content
 	stderrContent := stderrOutput.String()
 	if pushErr != nil || strings.Contains(stderrContent, "unauthorized") || strings.Contains(stderrContent, "denied") || strings.Contains(stderrContent, "authentication required") {
-		errorMsg := fmt.Sprintf("failed to push image")
+		errorMsg := "failed to push image"
 		if pushErr != nil {
-			errorMsg += fmt.Sprintf(": %s", pushErr)
+			errorMsg += ": " + pushErr.Error()
 		}
 		if stderrContent != "" {
-			errorMsg += fmt.Sprintf(" - %s", strings.TrimSpace(stderrContent))
+			errorMsg += " - " + strings.TrimSpace(stderrContent)
 		}
-		err := fmt.Errorf(errorMsg)
+		err := fmt.Errorf("%s", errorMsg)
 		state.Put("error", err)
-		ui.Error(err.Error())
+		ui.Error(errorMsg)
 		return multistep.ActionHalt
 	}
 
-	ui.Say(fmt.Sprintf("Image '%s' pushed successfully to '%s'", imageName, targetImage))
+	ui.Say("Image '" + imageName + "' pushed successfully to '" + targetImage + "'")
 	state.Put("pushed_image", targetImage)
 	return multistep.ActionContinue
 }
@@ -652,7 +664,7 @@ func (s *stepCleanupVM) Run(ctx context.Context, state multistep.StateBag) multi
 	ui := state.Get("ui").(packer.Ui)
 	vmName := state.Get("vm_name").(string)
 
-	ui.Say(fmt.Sprintf("Cleaning up VM '%s'", vmName))
+	ui.Say("Cleaning up VM '" + vmName + "'")
 
 	var cmd *exec.Cmd
 	if config.UseAPI {
@@ -661,7 +673,11 @@ func (s *stepCleanupVM) Run(ctx context.Context, state multistep.StateBag) multi
 	} else {
 		if config.MedaBinary == "cargo" {
 			cmd = exec.Command("cargo", "run", "--", "delete", vmName)
-			medaDir, err := getMedaDir(); if err != nil { return multistep.ActionHalt }; cmd.Dir = medaDir
+			medaDir, err := getMedaDir()
+			if err != nil {
+				return multistep.ActionHalt
+			}
+			cmd.Dir = medaDir
 		} else {
 			cmd = exec.Command(config.MedaBinary, "delete", vmName)
 		}
@@ -672,7 +688,7 @@ func (s *stepCleanupVM) Run(ctx context.Context, state multistep.StateBag) multi
 		log.Printf("Warning: failed to delete VM: %s - %s", err, string(output))
 		// Continue anyway - cleanup is best effort
 	} else {
-		ui.Say(fmt.Sprintf("VM '%s' cleaned up successfully", vmName))
+		ui.Say("VM '" + vmName + "' cleaned up successfully")
 	}
 
 	return multistep.ActionContinue
@@ -681,3 +697,4 @@ func (s *stepCleanupVM) Run(ctx context.Context, state multistep.StateBag) multi
 func (s *stepCleanupVM) Cleanup(state multistep.StateBag) {
 	// This is the cleanup step itself
 }
+

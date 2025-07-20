@@ -1,4 +1,5 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config
+// Code generation: packer-sdc mapstructure-to-hcl2 -type Config
+// Generated file: config.hcl2spec.go
 
 package main
 
@@ -20,10 +21,10 @@ type Config struct {
 	Comm                communicator.Config `mapstructure:",squash"`
 
 	// Meda configuration
-	MedaBinary   string `mapstructure:"meda_binary"`
-	MedaHost     string `mapstructure:"meda_host"`
-	MedaPort     int    `mapstructure:"meda_port"`
-	UseAPI       bool   `mapstructure:"use_api"`
+	MedaBinary string `mapstructure:"meda_binary"`
+	MedaHost   string `mapstructure:"meda_host"`
+	MedaPort   int    `mapstructure:"meda_port"`
+	UseAPI     bool   `mapstructure:"use_api"`
 
 	// VM configuration
 	VMName       string `mapstructure:"vm_name" required:"true"`
@@ -40,8 +41,8 @@ type Config struct {
 	Organization    string `mapstructure:"organization"`
 
 	// Push configuration
-	PushToRegistry  bool   `mapstructure:"push_to_registry"`
-	DryRun          bool   `mapstructure:"dry_run"`
+	PushToRegistry bool `mapstructure:"push_to_registry"`
+	DryRun         bool `mapstructure:"dry_run"`
 
 	ctx interpolate.Context
 }
@@ -143,3 +144,4 @@ func (c *Config) Prepare(raws ...interface{}) error {
 
 	return nil
 }
+
