@@ -122,14 +122,14 @@ func (c *Config) Prepare(raws ...interface{}) error {
 		c.Comm.SSHPort = 22
 	}
 	if c.Comm.SSHUsername == "" {
-		c.Comm.SSHUsername = "cirun"
+		c.Comm.SSHUsername = "meda"
 	}
 	if c.Comm.SSHTimeout == 0 {
 		c.Comm.SSHTimeout = 5 * time.Minute
 	}
 	if c.Comm.SSHPassword == "" {
 		// Set a default password for Meda images
-		c.Comm.SSHPassword = "cirun"
+		c.Comm.SSHPassword = "meda"
 	}
 
 	// SSH configuration for development

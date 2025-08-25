@@ -56,8 +56,8 @@ source "meda-vm" "ubuntu-base" {
   meda_binary = var.meda_binary_path
 
   # SSH configuration
-  ssh_username = "cirun"
-  ssh_password = "cirun"
+  ssh_username = "meda"
+  ssh_password = "meda"
   ssh_timeout  = "10m"
   ssh_port     = 22
 }
@@ -106,7 +106,7 @@ build {
       "echo 'Configuring Docker...'",
       "sudo systemctl enable docker",
       "sudo systemctl enable containerd",
-      "sudo usermod -aG docker cirun",
+      "sudo usermod -aG docker meda",
       "sudo mkdir -p /etc/docker",
       "echo '{\"log-driver\": \"json-file\", \"log-opts\": {\"max-size\": \"10m\", \"max-file\": \"3\"}}' | sudo tee /etc/docker/daemon.json"
     ]
@@ -126,7 +126,7 @@ build {
       "sudo rm -rf /usr/share/doc/*",
       "sudo rm -rf /usr/share/man/*",
       "sudo rm -rf /var/cache/debconf/*",
-      "sudo rm -rf /home/cirun/.cache/*",
+      "sudo rm -rf /home/meda/.cache/*",
       "sudo rm -rf /root/.cache/*",
       "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
       "sudo rm -rf /var/log/journal/*",
