@@ -75,6 +75,19 @@ build {
     ]
   }
 
+  # Create admin user with passwordless sudo
+  provisioner "shell" {
+    inline = [
+      "echo 'Creating admin user...'",
+      "sudo useradd -m -s /bin/bash -g admin admin",
+      "echo 'admin:admin' | sudo chpasswd",
+      "sudo usermod -aG sudo admin",
+      "echo 'admin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/admin",
+      "sudo chmod 0440 /etc/sudoers.d/admin",
+      "echo 'Admin user created with passwordless sudo'"
+    ]
+  }
+
   # System updates
   provisioner "shell" {
     inline = [
@@ -107,6 +120,7 @@ build {
       "sudo systemctl enable docker",
       "sudo systemctl enable containerd",
       "sudo usermod -aG docker cirun",
+      "sudo usermod -aG docker admin",
       "sudo mkdir -p /etc/docker",
       "echo '{\"log-driver\": \"json-file\", \"log-opts\": {\"max-size\": \"10m\", \"max-file\": \"3\"}}' | sudo tee /etc/docker/daemon.json"
     ]

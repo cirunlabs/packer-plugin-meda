@@ -95,7 +95,7 @@ jobs:
   build-images:
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
-    runs-on: ubuntu-latest
+    runs-on: "cirun-runner--${{ github.run_id }}"
     strategy:
       fail-fast: false
       matrix:
@@ -192,23 +192,6 @@ jobs:
         run: |
           cd images/${{ matrix.image }}
           packer validate .
-
-      - name: Check disk space before cleanup
-        run: df -h
-
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-
-      - name: Check disk space after cleanup
-        run: df -h
 
       - name: Build image with Packer
         run: |
