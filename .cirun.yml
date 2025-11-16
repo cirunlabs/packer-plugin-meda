@@ -12,3 +12,6 @@ runners:
       - cirun-runner
     extra_config:
       enableNestedVirtualization: true
+      baseDisk:
+        diskSizeGb: 120
+        diskType: pd-ssd

@@ -276,9 +276,12 @@ func (s *stepCreateVM) Run(ctx context.Context, state multistep.StateBag) multis
 		}
 	}
 
-	output, err := cmd.CombinedOutput()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
 	if err != nil {
-		err := fmt.Errorf("failed to create VM: %s - %s", err, string(output))
+		err := fmt.Errorf("failed to create VM: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt

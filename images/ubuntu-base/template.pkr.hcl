@@ -40,7 +40,7 @@ source "meda-vm" "ubuntu-base" {
   base_image        = "ubuntu-base:latest"
   memory            = "2G"
   cpus              = 4
-  disk_size         = "12G"
+  disk_size         = "10G"
 
   # Output configuration
   output_image_name = "ubuntu"
@@ -58,7 +58,7 @@ source "meda-vm" "ubuntu-base" {
   # SSH configuration
   ssh_username = "cirun"
   ssh_password = "cirun"
-  ssh_timeout  = "10m"
+  ssh_timeout  = "3m"
   ssh_port     = 22
 }
 
@@ -93,7 +93,7 @@ build {
     inline = [
       "echo 'Updating system packages...'",
       "sudo apt-get update",
-      "sudo apt-get upgrade -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y",
       "df -h"
     ]
   }
