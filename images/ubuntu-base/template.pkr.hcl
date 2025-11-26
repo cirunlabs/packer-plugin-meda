@@ -75,6 +75,14 @@ build {
     ]
   }
 
+  # Install jq
+  provisioner "shell" {
+    inline = [
+      "sudo apt-get update",
+      "sudo apt-get install -y jq"
+    ]
+  }
+
   # Create admin user with passwordless sudo
   provisioner "shell" {
     inline = [
@@ -91,8 +99,7 @@ build {
   # System updates
   provisioner "shell" {
     inline = [
-      "echo 'Updating system packages...'",
-      "sudo apt-get update",
+      "echo 'Upgrading system packages...'",
       "sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y",
       "df -h"
     ]
