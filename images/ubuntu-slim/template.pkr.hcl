@@ -40,7 +40,7 @@ source "meda-vm" "ubuntu-slim" {
   base_image        = "ubuntu-base:latest"
   memory            = "2G"
   cpus              = 4
-  disk_size         = "5G"
+  disk_size         = "3G"
 
   # Output configuration
   output_image_name = "ubuntu-slim"
