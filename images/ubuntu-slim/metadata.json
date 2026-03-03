@@ -12,7 +12,7 @@
   "vm_requirements": {
     "memory": "2G",
     "cpus": 4,
-    "disk": "3G"
+    "disk": "5G"
   },
   "registry": "ghcr.io",
   "recommended_usage": "make all",
