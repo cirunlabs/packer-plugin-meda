@@ -1,0 +1,150 @@
+variable "image_tag" {
+  type        = string
+  default     = "latest"
+  description = "Tag for the output image"
+}
+
+variable "registry" {
+  type        = string
+  default     = "ghcr.io"
+  description = "Container registry to push to"
+}
+
+variable "organization" {
+  type        = string
+  default     = env("GITHUB_REPOSITORY_OWNER") != "" ? env("GITHUB_REPOSITORY_OWNER") : "cirunlabs"
+  description = "Registry organization/namespace"
+}
+
+variable "push_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether to push the image to registry"
+}
+
+variable "dry_run" {
+  type        = bool
+  default     = false
+  description = "Dry run mode"
+}
+
+variable "meda_binary_path" {
+  type        = string
+  default     = env("MEDA_BINARY_PATH") != "" ? env("MEDA_BINARY_PATH") : "meda"
+  description = "Path to the meda binary to use"
+}
+
+source "meda-vm" "ubuntu-slim" {
+  # VM configuration
+  vm_name           = "ubuntu-slim-build"
+  base_image        = "ubuntu-base:latest"
+  memory            = "2G"
+  cpus              = 4
+  disk_size         = "3G"
+
+  # Output configuration
+  output_image_name = "ubuntu-slim"
+  output_tag        = var.image_tag
+  registry          = var.registry
+  organization      = var.organization
+
+  # Push configuration
+  push_to_registry  = var.push_enabled
+  dry_run           = var.dry_run
+
+  # Use meda binary
+  meda_binary = var.meda_binary_path
+
+  # SSH configuration
+  ssh_username = "cirun"
+  ssh_password = "cirun"
+  ssh_timeout  = "3m"
+  ssh_port     = 22
+}
+
+build {
+  name = "ubuntu-slim"
+  sources = ["source.meda-vm.ubuntu-slim"]
+
+  # Wait for cloud-init to complete
+  provisioner "shell" {
+    inline = [
+      "echo 'Waiting for cloud-init to complete...'",
+      "cloud-init status --wait",
+      "echo 'Cloud-init completed'"
+    ]
+  }
+
+  # Install jq
+  provisioner "shell" {
+    inline = [
+      "sudo apt-get update",
+      "sudo apt-get install -y jq"
+    ]
+  }
+
+  # Create admin user with passwordless sudo
+  provisioner "shell" {
+    inline = [
+      "echo 'Creating admin user...'",
+      "sudo useradd -m -s /bin/bash -g admin admin",
+      "echo 'admin:admin' | sudo chpasswd",
+      "sudo usermod -aG sudo admin",
+      "echo 'admin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/admin",
+      "sudo chmod 0440 /etc/sudoers.d/admin",
+      "echo 'Admin user created with passwordless sudo'"
+    ]
+  }
+
+  # System updates
+  provisioner "shell" {
+    inline = [
+      "echo 'Upgrading system packages...'",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y",
+      "df -h"
+    ]
+  }
+
+  # Cleanup and preparation for image creation
+  provisioner "shell" {
+    inline = [
+      "echo 'Cleaning up for image creation...'",
+      "sudo apt-get autoremove -y",
+      "sudo apt-get autoclean",
+      "sudo apt-get clean",
+      "sudo rm -rf /var/lib/apt/lists/*",
+      "sudo rm -rf /tmp/* /var/tmp/*",
+      "sudo rm -rf /var/cache/apt/archives/*",
+      "sudo rm -rf /usr/share/doc/*",
+      "sudo rm -rf /usr/share/man/*",
+      "sudo rm -rf /var/cache/debconf/*",
+      "sudo rm -rf /home/cirun/.cache/*",
+      "sudo rm -rf /root/.cache/*",
+      "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
+      "sudo rm -rf /var/log/journal/*",
+      "echo 'Image preparation completed'",
+      "echo 'Build completed at $(date)'"
+    ]
+  }
+
+  # Final validation
+  provisioner "shell" {
+    inline = [
+      "echo 'Validating slim image...'",
+      "jq --version",
+      "echo 'Ubuntu slim image built successfully'"
+    ]
+  }
+
+  post-processor "manifest" {
+    output = "manifest.json"
+    strip_path = true
+    custom_data = {
+      image_name = "ubuntu-slim"
+      image_tag  = var.image_tag
+      build_time = timestamp()
+      vm_name    = "{{ .MedaVMName }}"
+      vm_ip      = "{{ .MedaVMIP }}"
+    }
+  }
+}

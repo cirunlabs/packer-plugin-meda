@@ -1,0 +1,20 @@
+{
+  "name": "ubuntu-slim",
+  "description": "Minimal Ubuntu image without Docker",
+  "version": "1.0.0",
+  "base_image": "ubuntu:latest",
+  "features": [
+    "Minimal footprint",
+    "Aggressive cleanup for smaller image size",
+    "GHCR/OCI registry push support"
+  ],
+  "installed_tools": {},
+  "vm_requirements": {
+    "memory": "2G",
+    "cpus": 4,
+    "disk": "3G"
+  },
+  "registry": "ghcr.io",
+  "recommended_usage": "make all",
+  "build_time_estimate": "2-3 minutes"
+}

@@ -44,28 +44,41 @@ jobs:
       - name: Detect changed images
         id: changes
         run: |
-          # Only build ubuntu-base image
-          ubuntu_base_dir="ubuntu-base"
+          SUPPORTED_IMAGES=("ubuntu-base" "ubuntu-slim")
 
           # If specific image requested via workflow_dispatch
           if [ "${{ github.event.inputs.image_name }}" != "" ]; then
-            if [ "${{ github.event.inputs.image_name }}" == "ubuntu-base" ]; then
-              matrix="[\"ubuntu-base\"]"
+            requested="${{ github.event.inputs.image_name }}"
+            found=false
+            for img in "${SUPPORTED_IMAGES[@]}"; do
+              if [ "$requested" == "$img" ]; then
+                found=true
+                break
+              fi
+            done
+            if [ "$found" == "true" ]; then
+              matrix="[\"$requested\"]"
               has_changes="true"
             else
-              echo "Error: Only 'ubuntu-base' image is supported"
+              echo "Error: Unsupported image '$requested'. Supported: ${SUPPORTED_IMAGES[*]}"
               exit 1
             fi
-          # Force rebuild ubuntu-base image
+          # Force rebuild all images
           elif [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
-            if [ -d "images/ubuntu-base" ]; then
-              matrix="[\"ubuntu-base\"]"
+            images=()
+            for img in "${SUPPORTED_IMAGES[@]}"; do
+              if [ -d "images/$img" ]; then
+                images+=("\"$img\"")
+              fi
+            done
+            if [ ${#images[@]} -gt 0 ]; then
+              matrix="[$(IFS=,; echo "${images[*]}")]"
               has_changes="true"
             else
               matrix="[]"
               has_changes="false"
             fi
-          # Detect changes for push/PR events - only check ubuntu-base
+          # Detect changes for push/PR events
           else
             if [ "${{ github.event_name }}" == "pull_request" ]; then
               base_sha="${{ github.event.pull_request.base.sha }}"
@@ -73,15 +86,18 @@ jobs:
               base_sha="${{ github.event.before }}"
             fi
 
-            # Check if ubuntu-base directory has changes
-            if [ -d "images/ubuntu-base" ]; then
-              if git diff --quiet "$base_sha" HEAD -- "images/ubuntu-base/" 2>/dev/null; then
-                matrix="[]"
-                has_changes="false"
-              else
-                matrix="[\"ubuntu-base\"]"
-                has_changes="true"
+            images=()
+            for img in "${SUPPORTED_IMAGES[@]}"; do
+              if [ -d "images/$img" ]; then
+                if ! git diff --quiet "$base_sha" HEAD -- "images/$img/" 2>/dev/null; then
+                  images+=("\"$img\"")
+                fi
               fi
+            done
+
+            if [ ${#images[@]} -gt 0 ]; then
+              matrix="[$(IFS=,; echo "${images[*]}")]"
+              has_changes="true"
             else
               matrix="[]"
               has_changes="false"
