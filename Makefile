@@ -3,7 +3,7 @@ MEDA_VERSION ?= v0.2
 PACKER_VERSION ?= 1.10.0
 GO_VERSION ?= 1.21
 
-.PHONY: help setup build-plugin install-plugin build-images build-image clean test lint validate-templates
+.PHONY: help setup build-plugin install-plugin build-images build-image clean test test-network lint validate-templates
 
 # Default target
 help: ## Show this help message
@@ -123,6 +123,15 @@ test: ## Run Go tests for the plugin
 	@echo "🧪 Running tests..."
 	cd plugin && go test -v ./...
 	@echo "✅ Tests completed!"
+
+# Run network integration test
+test-network: ## Test VM networking (usage: make test-network IMAGE=ubuntu-slim)
+ifndef IMAGE
+	@echo "❌ Please specify IMAGE variable. Example: make test-network IMAGE=ubuntu-slim"
+	@exit 1
+endif
+	chmod +x tests/test-network.sh
+	./tests/test-network.sh $(IMAGE)
 
 # Run linting
 lint: ## Run linting on the plugin code

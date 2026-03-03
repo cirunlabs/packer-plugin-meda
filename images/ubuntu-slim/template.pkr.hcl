@@ -96,6 +96,15 @@ build {
     ]
   }
 
+  # System updates
+  provisioner "shell" {
+    inline = [
+      "echo 'Upgrading system packages...'",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y",
+      "df -h"
+    ]
+  }
+
   # Cleanup and preparation for image creation
   provisioner "shell" {
     inline = [
