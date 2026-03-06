@@ -79,7 +79,7 @@ build {
   provisioner "shell" {
     inline = [
       "sudo apt-get update",
-      "sudo apt-get install -y jq"
+      "sudo apt-get install -y jq build-essential"
     ]
   }
 
