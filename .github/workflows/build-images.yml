@@ -216,6 +216,7 @@ jobs:
         timeout-minutes: 30
         env:
           PACKER_LOG: 1
+          MEDA_DISK_SIZE: "3G"
           GITHUB_TOKEN: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Log in to Container Registry
