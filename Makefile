@@ -1,5 +1,5 @@
 # Variables
-MEDA_VERSION ?= v0.2
+MEDA_VERSION ?= v0.3.5
 PACKER_VERSION ?= 1.10.0
 GO_VERSION ?= 1.21
 

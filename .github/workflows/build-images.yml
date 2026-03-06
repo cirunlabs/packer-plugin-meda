@@ -26,7 +26,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
-  MEDA_VERSION: v0.3.4
+  MEDA_VERSION: v0.3.5
   PACKER_VERSION: 1.10.0
 
 jobs:
