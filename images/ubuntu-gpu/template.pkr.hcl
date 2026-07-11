@@ -45,7 +45,7 @@ variable "nvidia_driver_branch" {
 
 source "meda-vm" "ubuntu-gpu" {
   vm_name    = "ubuntu-gpu-build"
-  base_image = "ubuntu-base:latest"
+  base_image = "ubuntu:latest"
   memory     = "4G"
   cpus       = 4
   # NVIDIA driver + built kernel modules need headroom over the slim base.

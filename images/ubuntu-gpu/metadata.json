@@ -2,7 +2,7 @@
   "name": "ubuntu-gpu",
   "description": "Ubuntu image with the NVIDIA 550-server driver for VFIO GPU passthrough (nvidia-smi works in a meda microVM with an NVIDIA GPU attached)",
   "version": "1.0.0",
-  "base_image": "ubuntu-base:latest",
+  "base_image": "ubuntu:latest",
   "features": [
     "NVIDIA 550-server datacenter/headless driver (pinned)",
     "nouveau blacklisted, initramfs rebuilt",
