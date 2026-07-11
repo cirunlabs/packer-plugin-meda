@@ -35,11 +35,11 @@ variable "meda_binary_path" {
 }
 
 # NVIDIA server (datacenter) driver branch. Pinned for reproducibility.
-# 550-server supports Ada-generation datacenter GPUs (e.g. RTX 4000 SFF Ada,
+# 580-server supports Ada-generation datacenter GPUs (e.g. RTX 4000 SFF Ada,
 # 10de:27b0). Bump deliberately, never floating.
 variable "nvidia_driver_branch" {
   type        = string
-  default     = "550"
+  default     = "580"
   description = "NVIDIA -server driver branch to install"
 }
 
