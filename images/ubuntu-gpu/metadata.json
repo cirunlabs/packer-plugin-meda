@@ -1,0 +1,26 @@
+{
+  "name": "ubuntu-gpu",
+  "description": "Ubuntu image with the NVIDIA 550-server driver for VFIO GPU passthrough (nvidia-smi works in a meda microVM with an NVIDIA GPU attached)",
+  "version": "1.0.0",
+  "base_image": "ubuntu-base:latest",
+  "features": [
+    "NVIDIA 550-server datacenter/headless driver (pinned)",
+    "nouveau blacklisted, initramfs rebuilt",
+    "nvidia, nvidia_modeset, nvidia_uvm auto-loaded at boot",
+    "nvidia-persistenced enabled (headless, no X)",
+    "Docker CE (inherited from ubuntu-base)",
+    "GHCR/OCI registry push support"
+  ],
+  "installed_tools": {
+    "gpu": ["nvidia-driver-550-server", "nvidia-utils-550-server", "nvidia-smi"]
+  },
+  "vm_requirements": {
+    "memory": "4G",
+    "cpus": 4,
+    "disk": "12G",
+    "gpu": "NVIDIA GPU via VFIO passthrough (--device)"
+  },
+  "registry": "ghcr.io",
+  "recommended_usage": "make build-image IMAGE=ubuntu-gpu",
+  "build_time_estimate": "6-10 minutes"
+}

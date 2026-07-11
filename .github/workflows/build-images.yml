@@ -44,7 +44,7 @@ jobs:
       - name: Detect changed images
         id: changes
         run: |
-          SUPPORTED_IMAGES=("ubuntu-base" "ubuntu-slim")
+          SUPPORTED_IMAGES=("ubuntu-base" "ubuntu-slim" "ubuntu-gpu")
 
           # If specific image requested via workflow_dispatch
           if [ "${{ github.event.inputs.image_name }}" != "" ]; then
