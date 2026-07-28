@@ -80,6 +80,19 @@ build {
     ]
   }
 
+  # Runtime deps meda itself needs to create VMs (genisoimage for the
+  # cloud-init ISO, qemu-img from qemu-utils for qcow2 backing files).
+  # Neither ships in the base ubuntu cloud image. Without them, meda
+  # running inside this VM (nested, on top of the host's own meda VM)
+  # fails before it ever reaches cloud-hypervisor.
+  provisioner "shell" {
+    inline = [
+      "echo 'Installing meda runtime dependencies...'",
+      "sudo apt-get update",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y genisoimage qemu-utils"
+    ]
+  }
+
   # Blacklist nouveau so the proprietary NVIDIA driver can bind the card.
   # Must be in the initramfs, hence update-initramfs after writing the conf.
   provisioner "shell" {
